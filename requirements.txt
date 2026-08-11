@@ -1,0 +1,8 @@
+langchain-core
+langgraph
+langchain-google-genai
+langchain-groq
+tavily-python
+beautifulsoup4
+streamlit
+python-dotenv

@@ -1,0 +1,4 @@
+id,prompt,expected_criteria
+1,"Compare PyTorch vs TensorFlow for mobile in 2026","Must mention ExecuTorch. Must discuss TFLite hardware support."
+2,"Analyze MTCNN vs RetinaFace for local hardware","Must compare inference speeds. Must include RAM constraints."
+3,"Explain Graph Neural Networks for supply chains","Must define nodes/edges in a supply chain context. Must be under 500 words."

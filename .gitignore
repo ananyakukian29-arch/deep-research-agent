@@ -1,0 +1,21 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Dynamic Agent Memory (Do not commit raw scrape dumps)
+memory/*.md
+memory/*.json
+!memory/state.py
+
+# OS generated files
+.DS_Store
