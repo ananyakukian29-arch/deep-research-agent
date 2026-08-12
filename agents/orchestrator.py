@@ -1,44 +1,56 @@
 import re
 import json
 import time
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
-from config.settings import GOOGLE_API_KEY
+from config.settings import GROQ_API_KEY
 from memory.state import AgentState
 
-# Bug 1 note: gemini-3.5-flash IS the correct model for this API key.
-# Live model list confirmed it is available and supported for generateContent.
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.5-flash",
-    api_key=GOOGLE_API_KEY,
-    temperature=0.1
+# Bypassing the Google daily cap by using Groq. 
+# Temperature locked to 0.0 for deterministic, strict outputs.
+llm = ChatGroq(
+    model="llama-3.1-8b-instant",
+    api_key=GROQ_API_KEY,
+    temperature=0.0
 )
 
-
-def invoke_with_backoff(llm, messages, max_retries=3):
+def invoke_with_backoff(llm, messages, max_retries=5):
+    """Traps rate limits AND network/DNS blips with retries."""
     for attempt in range(max_retries):
         try:
             return llm.invoke(messages)
         except Exception as e:
-            if "429" in str(e).lower() or "resource_exhausted" in str(e).lower():
-                print(f"429 Rate Limit Hit. Sleeping 16s... (Attempt {attempt + 1})")
-                time.sleep(16)
+            error_str = str(e).lower()
+            is_rate_limit = "429" in error_str or "resource_exhausted" in error_str
+            is_network_error = any(
+                k in error_str for k in ("getaddrinfo", "connecterror", "connection", "timeout", "unavailable")
+            )
+            
+            if is_rate_limit or is_network_error:
+                sleep_time = 16 if is_rate_limit else (5 * (attempt + 1))
+                reason = "429 Rate Limit" if is_rate_limit else "Network/DNS Failure"
+                print(f"\n[!] {reason} detected. Sleeping {sleep_time}s... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(sleep_time)
             else:
                 raise
-    raise Exception("CRITICAL: Max retries exceeded.")
-
+    raise Exception("CRITICAL: Max retries exceeded due to persistent network or rate-limit failures.")
 
 def orchestrator_node(state: AgentState) -> dict:
     """The Orchestrator Agent scopes the user prompt and generates a research plan."""
     request = state.get("user_request", "")
 
-    # Runtime key guard — surfaces a clear error via the graph rather than a crash.
-    if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY is not set. Check your .env file.")
+    # Runtime key guard
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY is not set. Check your .env file.")
 
+    # The STRICT, deterministic system prompt
     sys_prompt = (
-        "You are a master research planner. Break the user's request into exactly 3 distinct, "
-        "searchable sub-topics. Return ONLY a valid JSON list of strings. Do not include markdown formatting or commentary."
+        "You are a precise technical research planner. Analyze the user prompt and extract ALL specific terms, "
+        "frameworks (e.g., ExecuTorch, TFLite), metrics (e.g., RAM usage, inference speed, FPS), definitions "
+        "(e.g., nodes, edges), and hardware constraints.\n\n"
+        "Break the user request into exactly 3 searchable sub-topics. EVERY sub-topic MUST explicitly include "
+        "the exact keywords and metrics extracted from the prompt so the web search agent is forced to look for them.\n\n"
+        "Return ONLY a raw JSON array of 3 strings. Example: [\"topic 1\", \"topic 2\", \"topic 3\"]"
     )
 
     response = invoke_with_backoff(
@@ -49,7 +61,7 @@ def orchestrator_node(state: AgentState) -> dict:
         ],
     )
 
-    # Normalise content: Gemini may return a list of content blocks.
+    # Normalise content
     raw_content = response.content
     if isinstance(raw_content, list):
         raw_content = "".join(
@@ -57,8 +69,7 @@ def orchestrator_node(state: AgentState) -> dict:
             for item in raw_content
         )
 
-    # Bug 3 fix: use regex to strip markdown fences as literal substrings,
-    # NOT str.strip(chars) which strips individual characters and corrupts JSON.
+    # JSON Parsing with robust regex fallback
     try:
         clean_json = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
         clean_json = re.sub(r"\s*```$", "", clean_json).strip()
@@ -70,4 +81,3 @@ def orchestrator_node(state: AgentState) -> dict:
         plan = [request]
 
     return {"research_plan": plan}
-

@@ -1,40 +1,48 @@
 import time
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
-from config.settings import GOOGLE_API_KEY
+from config.settings import GROQ_API_KEY
 from tools.search import perform_search
 from memory.state import AgentState
 
 # Bug 1 note: gemini-3.5-flash IS the correct model for this API key.
 # Live model list confirmed it is available and supported for generateContent.
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.5-flash",
-    api_key=GOOGLE_API_KEY,
+llm = ChatGroq(
+    model="llama-3.1-8b-instant",
+    api_key=GROQ_API_KEY,
     temperature=0.2
 )
 
 
 
-def invoke_with_backoff(llm, messages, max_retries=3):
+def invoke_with_backoff(llm, messages, max_retries=5):
+    """Traps rate limits AND network/DNS blips with retries."""
     for attempt in range(max_retries):
         try:
             return llm.invoke(messages)
         except Exception as e:
-            if "429" in str(e).lower() or "resource_exhausted" in str(e).lower():
-                print(f"429 Rate Limit Hit. Sleeping 16s... (Attempt {attempt + 1})")
-                time.sleep(16)
+            error_str = str(e).lower()
+            is_rate_limit = "429" in error_str or "resource_exhausted" in error_str
+            is_network_error = any(
+                k in error_str for k in ("getaddrinfo", "connecterror", "connection", "timeout", "unavailable")
+            )
+            
+            if is_rate_limit or is_network_error:
+                sleep_time = 16 if is_rate_limit else (5 * (attempt + 1))
+                reason = "429 Rate Limit" if is_rate_limit else "Network/DNS Failure"
+                print(f"\n[!] {reason} detected. Sleeping {sleep_time}s... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(sleep_time)
             else:
                 raise
-    raise Exception("CRITICAL: Max retries exceeded.")
-
+    raise Exception("CRITICAL: Max retries exceeded due to persistent network or rate-limit failures.")
 
 def researcher_node(state: AgentState) -> dict:
     """The Researcher Agent executes a search and synthesis loop for a specific topic."""
     topic = state.get("current_topic", "")
 
     # Runtime key guard — surfaces a clear error via the graph rather than a crash.
-    if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY is not set. Check your .env file.")
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY is not set. Check your .env file.")
 
     # 1. Execute the search tool
     search_results = perform_search(topic)

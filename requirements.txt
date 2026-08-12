@@ -6,3 +6,4 @@ tavily-python
 beautifulsoup4
 streamlit
 python-dotenv
+pandas
