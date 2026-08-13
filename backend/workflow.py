@@ -1,8 +1,8 @@
 from langgraph.graph import StateGraph, START, END
-from memory.state import AgentState
-from agents.orchestrator import orchestrator_node
-from agents.researcher import researcher_node
-from agents.synthesizer import synthesizer_node
+from backend.memory.state import AgentState
+from backend.agents.orchestrator import orchestrator_node
+from backend.agents.researcher import researcher_node
+from backend.agents.synthesizer import synthesizer_node
 
 # Bug 4 fix: maximum number of researcher iterations per graph run.
 # researcher_node increments loop_count on every pass; route_research checks

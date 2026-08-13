@@ -3,8 +3,9 @@ import os
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 from backend.config import settings
-from tools.search import perform_search
-from memory.state import AgentState
+from backend.tools.search import perform_search
+from backend.memory.state import AgentState
+
 
 GROQ_API_KEY = settings.GROQ_API_KEY
 

@@ -1,5 +1,7 @@
 from tavily import TavilyClient
-from config.settings import TAVILY_API_KEY
+from backend.config import settings
+
+TAVILY_API_KEY = settings.TAVILY_API_KEY
 
 # Bug 6 fix: instantiate the client once at module load and reuse it.
 # Re-creating TavilyClient on every search call wastes connection setup time

@@ -2,7 +2,7 @@ import pandas as pd
 import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
-from main import app_graph
+from backend.workflow import app_graph
 
 # Initialize your free Judge
 judge_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
