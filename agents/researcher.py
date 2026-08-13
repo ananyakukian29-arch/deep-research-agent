@@ -1,16 +1,19 @@
 import time
+import os
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 from config.settings import GROQ_API_KEY
 from tools.search import perform_search
 from memory.state import AgentState
 
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
 # Bug 1 note: gemini-3.5-flash IS the correct model for this API key.
 # Live model list confirmed it is available and supported for generateContent.
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=GROQ_API_KEY,
-    temperature=0.2
+    temperature=0.0
 )
 
 

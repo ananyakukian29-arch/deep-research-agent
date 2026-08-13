@@ -1,8 +1,11 @@
 import time
+import os
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 from config.settings import GROQ_API_KEY
 from memory.state import AgentState
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 # Initializing Groq's Llama 3 with temperature=0.0 for deterministic compliance
 llm = ChatGroq(

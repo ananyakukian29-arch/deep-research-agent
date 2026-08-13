@@ -1,10 +1,13 @@
 import re
 import json
 import time
+import os
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 from config.settings import GROQ_API_KEY
 from memory.state import AgentState
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 # Bypassing the Google daily cap by using Groq. 
 # Temperature locked to 0.0 for deterministic, strict outputs.
