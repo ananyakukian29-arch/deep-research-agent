@@ -20,3 +20,4 @@ class AgentState(TypedDict):
     
     # Safety mechanism to prevent infinite loops (costs money)
     loop_count: int
+    metrics: dict

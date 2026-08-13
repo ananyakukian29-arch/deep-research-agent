@@ -2,20 +2,21 @@ import time
 import os
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
-from config.settings import GROQ_API_KEY
+from backend.config import settings
 from tools.search import perform_search
 from memory.state import AgentState
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+GROQ_API_KEY = settings.GROQ_API_KEY
 
-# Bug 1 note: gemini-3.5-flash IS the correct model for this API key.
-# Live model list confirmed it is available and supported for generateContent.
+# Groq Pricing for llama-3.1-8b-instant (Per 1M Tokens)
+INPUT_COST_1M = 0.05
+OUTPUT_COST_1M = 0.08
+
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=GROQ_API_KEY,
     temperature=0.0
 )
-
 
 
 def invoke_with_backoff(llm, messages, max_retries=5):
@@ -39,9 +40,13 @@ def invoke_with_backoff(llm, messages, max_retries=5):
                 raise
     raise Exception("CRITICAL: Max retries exceeded due to persistent network or rate-limit failures.")
 
+
 def researcher_node(state: AgentState) -> dict:
     """The Researcher Agent executes a search and synthesis loop for a specific topic."""
+    start_time = time.perf_counter()
     topic = state.get("current_topic", "")
+    metrics = state.get("metrics", {"total_cost": 0.0, "total_prompt_tokens": 0, "total_completion_tokens": 0, "node_latencies": {}})
+    loop_count = state.get("loop_count", 0)
 
     # Runtime key guard — surfaces a clear error via the graph rather than a crash.
     if not GROQ_API_KEY:
@@ -64,7 +69,8 @@ def researcher_node(state: AgentState) -> dict:
             HumanMessage(content=msg),
         ],
     )
-    # Normalise content: Gemini may return a list of content blocks.
+
+    # Normalise content
     raw_content = response.content
     if isinstance(raw_content, list):
         raw_content = "".join(
@@ -73,13 +79,29 @@ def researcher_node(state: AgentState) -> dict:
         )
 
     # 3. Format for memory insertion.
-    # Bug 2 fixed: use raw_content (normalised string) not response.content
-    # (which could still be a list of dicts, causing silent data corruption).
     new_research = [f"### Sub-Topic: {topic}\n{raw_content}\n"]
 
-    # operator.add in the State schema will append this to the existing list.
-    # Bug 4 fix: increment loop_count so the router can enforce the loop cap.
+    # Metrics Extraction & Calculation
+    latency = round(time.perf_counter() - start_time, 2)
+    prompt_tokens = 0
+    completion_tokens = 0
+
+    if hasattr(response, "usage_metadata") and response.usage_metadata:
+        prompt_tokens = response.usage_metadata.get("input_tokens", 0)
+        completion_tokens = response.usage_metadata.get("output_tokens", 0)
+    elif hasattr(response, "response_metadata") and "token_usage" in response.response_metadata:
+        prompt_tokens = response.response_metadata["token_usage"].get("prompt_tokens", 0)
+        completion_tokens = response.response_metadata["token_usage"].get("completion_tokens", 0)
+
+    cost = ((prompt_tokens / 1_000_000) * INPUT_COST_1M) + ((completion_tokens / 1_000_000) * OUTPUT_COST_1M)
+
+    metrics["total_cost"] += cost
+    metrics["total_prompt_tokens"] += prompt_tokens
+    metrics["total_completion_tokens"] += completion_tokens
+    metrics["node_latencies"][f"researcher_loop_{loop_count}"] = latency
+
     return {
         "collected_research": new_research,
-        "loop_count": state.get("loop_count", 0) + 1
+        "loop_count": loop_count + 1,
+        "metrics": metrics
     }
