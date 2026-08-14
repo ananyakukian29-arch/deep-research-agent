@@ -15,11 +15,12 @@ def _get_collection():
     db = client[DB_NAME]
     return db[COLLECTION_NAME]
 
-def save_research_run(user_request: str, sub_topics: list, final_report: str, latency_seconds: float = None) -> str:
+def save_research_run(user_request: str, sub_topics: list, final_report: str, task_id: str, latency_seconds: float = None) -> str:
     """Saves a completed research session to MongoDB including execution latency."""
     try:
         collection = _get_collection()
         doc = {
+            "task_id": task_id,
             "user_request": user_request,
             "sub_topics": sub_topics,
             "final_report": final_report,

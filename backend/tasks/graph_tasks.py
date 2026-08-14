@@ -1,11 +1,12 @@
-from celery import shared_task
+from backend.celery_app import celery_app
 from backend.workflow import app_graph
 from backend.memory.db import save_research_run
 import time
 
-@shared_task(bind=True)
+@celery_app.task(bind=True)
 def run_research_pipeline(self, user_query: str):
     """Executes the LangGraph pipeline asynchronously in the background."""
+    current_task_id = self.request.id
     
     current_state = {
         "user_request": user_query,
@@ -44,10 +45,12 @@ def run_research_pipeline(self, user_query: str):
         if not report:
             return {"status": "FAILED", "error": "No report generated."}
 
+        # Passing the extracted task_id to MongoDB
         saved_id = save_research_run(
             user_request=current_state.get("user_request", ""),
             sub_topics=current_state.get("research_plan", []),
             final_report=report,
+            task_id=current_task_id, 
             latency_seconds=elapsed_latency
         )
 
@@ -55,7 +58,8 @@ def run_research_pipeline(self, user_query: str):
             "status": "SUCCESS", 
             "report": report,
             "latency": elapsed_latency,
-            "saved_id": saved_id
+            "saved_id": saved_id,
+            "task_id": current_task_id
         }
 
     except Exception as e:

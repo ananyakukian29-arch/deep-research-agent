@@ -10,7 +10,6 @@ router = APIRouter()
 def start_research(request: ResearchRequest):
     """Takes a user query, sends it to the Celery worker, and returns a Task ID."""
     try:
-        # .delay() is how you trigger a Celery task asynchronously
         task = run_research_pipeline.delay(request.query)
         return TaskResponse(task_id=task.id, status="PENDING")
     except Exception as e:
@@ -26,7 +25,6 @@ def get_task_status(task_id: str):
         "status": task_result.status,
     }
     
-    # Celery states: PENDING, PROGRESS, SUCCESS, FAILURE
     if task_result.state == 'PROGRESS':
         response["details"] = task_result.info.get("status", "Processing...")
     elif task_result.state == 'SUCCESS':
