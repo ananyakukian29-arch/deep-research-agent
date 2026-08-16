@@ -1,0 +1,52 @@
+services:
+  # 1. The React Frontend
+  - type: web
+    name: sentinel-react
+    runtime: docker
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: sentinel-fastapi
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+
+  # 2. The FastAPI Backend
+  - type: web
+    name: sentinel-fastapi
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sentinel-redis
+          property: connectionString
+
+  # 3. The Celery Worker
+  - type: worker
+    name: sentinel-celery
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerCommand: celery -A backend.celery_app worker --loglevel=info --pool=gevent
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: sentinel-redis
+          property: connectionString
+
+  # 4. The Message Broker
+  - type: keyvalue
+    name: sentinel-redis
