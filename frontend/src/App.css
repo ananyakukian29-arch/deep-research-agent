@@ -70,6 +70,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-height: 0; 
 }
 
 .history-title {
@@ -208,12 +209,10 @@ input:focus {
 }
 
 .content-container {
+  width: 100%;
   max-width: 1100px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 32px;
-  align-items: start;
+  display: block; 
 }
 
 .report-card {
@@ -223,6 +222,9 @@ input:focus {
   border-radius: 16px;
   padding: 40px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 100%; /* This forces it to expand */
+  min-width: 0; 
+  overflow: hidden;
 }
 
 .meta-sidebar {
@@ -296,6 +298,66 @@ input:focus {
   color: #fff;
 }
 
+/* The standalone metrics box */
+.sidebar-metrics {
+  padding: 16px;
+  margin: 20px 15px 15px 15px; 
+  background: #18181b; 
+  border: 1px solid #3f3f46;
+  border-radius: 12px;
+  margin-top: auto; 
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+/* Strict spacing for the rows */
+.metric-row-small {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #27272a;
+}
+
+.metric-row-small:last-of-type {
+  border-bottom: none;
+  margin-bottom: 12px;
+}
+
+.metric-row-small .metric-label {
+  color: #a1a1aa;
+}
+
+.metric-row-small .metric-value {
+  color: #f4f4f5;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  text-align: right;
+  font-weight: 500;
+}
+
+/* The export button inside the box */
+.export-btn-small {
+  width: 100%;
+  padding: 8px;
+  background: #27272a;
+  color: #e4e4e7;
+  border: 1px solid #3f3f46;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.export-btn-small:hover {
+  background: #3f3f46;
+  color: #fff;
+  border-color: #60a5fa;
+}
 /* Status States */
 .status-container {
   display: flex;
@@ -349,6 +411,11 @@ input:focus {
   line-height: 1.8;
   font-size: 1.05rem;
   color: #d4d4d8;
+  text-align: left;
+  
+  /* ADD THESE TWO LINES */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3 {
@@ -356,6 +423,7 @@ input:focus {
   margin: 2em 0 1em;
   font-weight: 600;
   letter-spacing: -0.02em;
+  text-align: left;
 }
 
 .markdown-body h1 { font-size: 2rem; color: #60a5fa; margin-top: 0; }

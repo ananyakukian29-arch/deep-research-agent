@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -14,7 +14,44 @@ function App() {
   const [metrics, setMetrics] = useState(null)
   const [history, setHistory] = useState([])
 
-  const API_BASE_URL = 'http://127.0.0.1:8000'
+  // Replace the hardcoded string with this:
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
+  // NEW: Hydrate history from MongoDB on page load
+  // Hydrate history from MongoDB and auto-load the most recent session
+  useEffect(() => {
+    const loadDatabaseHistory = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/history`);
+        if (res.data && res.data.history && res.data.history.length > 0) {
+          
+          const formattedHistory = res.data.history.map(item => ({
+            id: item.id,
+            query: item.query,
+            report: item.report,
+            metrics: {
+              latency: item.latency,
+              savedId: item.saved_id || item.id
+            }
+          }));
+          
+          setHistory(formattedHistory);
+          
+          // Auto-load the newest item so the screen isn't blank on refresh
+          const newest = formattedHistory[0];
+          setQuery(newest.query);
+          setReport(newest.report);
+          setMetrics(newest.metrics);
+          setStatus('success');
+        }
+      } catch (err) {
+        console.error("Failed to sync database history:", err);
+      }
+    };
+
+    loadDatabaseHistory();
+  }, []);
+
 
   const startResearch = async (e) => {
     e.preventDefault()
@@ -109,6 +146,7 @@ function App() {
             <Plus size={18} />
           </button>
         </div>
+        
         <div className="history-list">
           <div className="history-title">
             <History size={14} /> Session History
@@ -128,6 +166,26 @@ function App() {
             ))
           )}
         </div>
+
+        {/* NEW: Docked Metrics Panel at the bottom of the sidebar */}
+        {status === 'success' && metrics && (
+          <div className="sidebar-metrics">
+            <div className="history-title mb-2">
+              <BarChart2 size={14} /> Performance
+            </div>
+            <div className="metric-row-small">
+              <span className="metric-label">Latency</span>
+              <span className="metric-value">{metrics.latency ? `${metrics.latency}s` : 'N/A'}</span>
+            </div>
+            <div className="metric-row-small">
+              <span className="metric-label">DB ID</span>
+              <span className="metric-value text-xs">{metrics.savedId ? `${metrics.savedId.substring(0,8)}...` : 'N/A'}</span>
+            </div>
+            <button onClick={handleExport} className="export-btn-small mt-3">
+              <Download size={14} /> Export .md
+            </button>
+          </div>
+        )}
       </aside>
 
       <main className="main-content">
@@ -185,24 +243,6 @@ function App() {
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {report}
                 </ReactMarkdown>
-              </div>
-
-              <div className="meta-sidebar">
-                <div className="meta-card">
-                  <h3><BarChart2 size={16} /> Performance Metrics</h3>
-                  <div className="metric-row">
-                    <span className="metric-label">Total Latency</span>
-                    <span className="metric-value">{metrics?.latency ? `${metrics.latency}s` : 'N/A'}</span>
-                  </div>
-                  <div className="metric-row">
-                    <span className="metric-label">Execution DB ID</span>
-                    <span className="metric-value text-xs">{metrics?.savedId ? `${metrics.savedId.substring(0,8)}...` : 'N/A'}</span>
-                  </div>
-                  {/* NEW: Export Button */}
-                  <button onClick={handleExport} className="export-btn">
-                    <Download size={16} /> Export Markdown
-                  </button>
-                </div>
               </div>
             </div>
           )}

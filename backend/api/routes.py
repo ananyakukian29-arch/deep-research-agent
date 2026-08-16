@@ -4,6 +4,9 @@ from backend.api.models import ResearchRequest, TaskResponse
 from backend.tasks.graph_tasks import run_research_pipeline
 from backend.celery_app import celery_app
 
+# INJECTED IMPORT: Pulls the DB function you just wrote
+from backend.memory.db import fetch_recent_history
+
 router = APIRouter()
 
 @router.post("/research", response_model=TaskResponse)
@@ -33,3 +36,14 @@ def get_task_status(task_id: str):
         response["error"] = str(task_result.info)
         
     return response
+
+# INJECTED ENDPOINT: Serves MongoDB data to the React UI
+@router.get("/history")
+def get_research_history(limit: int = 20):
+    """Fetches the most recent research runs from MongoDB for the UI sidebar."""
+    try:
+        data = fetch_recent_history(limit=limit)
+        return {"history": data}
+    except Exception as e:
+        # Fails safely so the backend doesn't crash if Mongo drops
+        return {"error": f"Failed to fetch history: {str(e)}"}
