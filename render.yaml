@@ -50,3 +50,4 @@ services:
   # 4. The Message Broker
   - type: keyvalue
     name: sentinel-redis
+    ipAllowList: []
