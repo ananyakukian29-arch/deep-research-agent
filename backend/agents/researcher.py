@@ -14,7 +14,7 @@ INPUT_COST_1M = 0.05
 OUTPUT_COST_1M = 0.08
 
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model="openai/gpt-oss-120b",
     api_key=GROQ_API_KEY,
     temperature=0.0
 )

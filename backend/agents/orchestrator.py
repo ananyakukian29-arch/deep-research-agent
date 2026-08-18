@@ -12,7 +12,7 @@ GROQ_API_KEY = settings.GROQ_API_KEY
 # Bypassing the Google daily cap by using Groq. 
 # Temperature locked to 0.0 for deterministic, strict outputs.
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+    model="openai/gpt-oss-120b",
     api_key=GROQ_API_KEY,
     temperature=0.0
 )

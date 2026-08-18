@@ -35,7 +35,7 @@ services:
     runtime: docker
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
-    dockerCommand: celery -A backend.celery_app worker --loglevel=info --pool=gevent
+    dockerCommand: celery -A backend.celery_app worker --loglevel=info --pool=threads --concurrency=4
     envVars:
       - key: MONGO_URI
         sync: false
