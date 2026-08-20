@@ -5,7 +5,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+# Read from environment, no fallback allowed.
+MONGO_URI = os.getenv("MONGO_URI")
+
+# Fail fast and loud if the configuration is missing.
+if not MONGO_URI:
+    raise ValueError("CRITICAL ERROR: MONGO_URI environment variable is missing or empty. The server cannot start without a valid database connection.")
+
 DB_NAME = os.getenv("MONGO_DB_NAME", "deep_research_db")
 COLLECTION_NAME = "research_history"
 
